@@ -48,8 +48,8 @@ public class RocketController : MonoBehaviour
     {
         if (coroutine != null)
         {
-            StopCoroutine(coroutine);
             fakeRocket.gameObject.SetActive(false);
+            StopCoroutine(coroutine);
         }
     }
     IEnumerator AnimationFLy(Transform target, float time = 1.0f)
@@ -86,18 +86,21 @@ public class RocketController : MonoBehaviour
             yield return null;
         }
         AudioManager.Instance.audioSource.PlayOneShot(boomAudio);
+        boom.gameObject.SetActive(true);
         boom.Play();
         yield return new WaitForSeconds(1f);
         AudioManager.Instance.audioSource.PlayOneShot(gameOverSound);
         Render.SetActive(false);
-        level.End();
+        level.EndLevel(false);
+        boom.gameObject.SetActive(false);
 
     }
     public void NotifySuccess()
     {
         print("success");
         AudioManager.Instance.audioSource.PlayOneShot(correctSound);
-        level.End();
+        level.EndLevel(true);
+        boom.gameObject.SetActive(false);
     }
     public void ResetGame()
     {
