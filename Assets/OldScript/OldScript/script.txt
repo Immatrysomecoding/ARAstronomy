@@ -1,0 +1,1330 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UnityEngine;
+
+namespace Assets.Scripts.Model
+{
+    public class AstronomicalObject : MonoBehaviour
+    {
+        static public double G = 6.67384e-11;
+        public string Name;
+        public double Mass;
+        private float scaleDownFactor = 1000; // 1unit: m -> km
+        public float height;
+        public float scaleFactor = 1;
+        public DefaultObserverEventHandler eventHandler;
+        public float Distance(AstronomicalObject obj)
+        {
+            return Vector3.Distance(transform.position, obj.transform.position) * scaleDownFactor;
+        }
+        public double GetAttractiveForce(AstronomicalObject obj)
+        {
+            return (G * this.Mass * obj.Mass) / Mathf.Pow((Distance(obj) * 1000), 2f);
+        }
+        public void setHeight()
+        {
+            transform.localPosition = new Vector3(transform.localPosition.x, height, transform.localPosition.z);
+        }
+        private void Update()
+        {
+            //if (eventHandler == null) return;
+            //if (isNearEdge())
+            //    eventHandler.StatusFilter = DefaultObserverEventHandler.TrackingStatusFilter.Tracked;
+            //else
+            //    eventHandler.StatusFilter = DefaultObserverEventHandler.TrackingStatusFilter.Tracked_ExtendedTracked;
+        }
+        bool isNearEdge()
+        {
+            var screenPoint = Camera.main.WorldToScreenPoint(transform.position);
+            if ((screenPoint.x < Screen.width / 10) || screenPoint.x > (Screen.width - Screen.width / 10) || screenPoint.y < Screen.height / 10 || screenPoint.y > Screen.height - Screen.height / 10)
+                return true;
+            return false;
+        }
+        public void Lost()
+        {
+            print("lost");
+        }
+
+    }
+}
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AudioManager : MonoBehaviour
+{
+    public AudioSource audioSource;
+    static public AudioManager Instance;
+    // Start is called before the first frame update
+    void Start()
+    {
+        Instance = this;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ColorChange : MonoBehaviour
+{
+    private Material mat;
+    public Color color1;
+    public Color color2;
+    private bool mutex = true;
+    public float interval = 1;
+    private float timer = 1;
+    // Start is called before the first frame update
+    void Start()
+    {
+        mat = GetComponent<Renderer>().material;
+        timer = interval;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        timer -= Time.deltaTime;
+        if (timer <= 0)
+        {
+            mutex = !mutex;
+            timer = interval;
+            if (mutex)
+            {
+                mat.color = color1;
+            }
+            else
+            {
+                mat.color = color2;
+            }
+        }
+    }
+}
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using Vuforia;
+
+public class Configuration : MonoBehaviour
+{
+    public AudioSource BackGroundMusic;
+    public AudioSource Sound;
+    public Slider BackGroundMusicSlider;
+    public Slider SoundSlider;
+    public GameObject Menu;
+    public GameObject SettingsCanvas;
+    public GameObject EndingCanvas;
+    public TMP_InputField TryCountField;
+    public TMP_InputField NumberOfLevelField;
+    public TMP_InputField TimeField;
+    public Button SaveBtn;
+    public GameObject EndingCanvasLeft;
+    public GameObject EndingCanvasRight;
+    // Start is called before the first frame update
+    void Start()
+    {
+        LoadParams();
+    }
+    void LoadParams()
+    {
+        int numberOfLevel = PlayerPrefs.GetInt("numLevel", 3);
+        int timeEachLevel = PlayerPrefs.GetInt("time", 30);
+        int tryCount = PlayerPrefs.GetInt("tryCount", 5);
+        Level.maxTime = timeEachLevel;
+        Level.NumberOfLevels = numberOfLevel;
+        PlaceHolder.maxTryCount = tryCount;
+        float musicVolume = PlayerPrefs.GetFloat("musicVolume", 1);
+        float soundVolume = PlayerPrefs.GetFloat("soundVolume", 0.7f);
+        BackGroundMusic.volume = musicVolume;
+        Sound.volume = soundVolume;
+        BackGroundMusicSlider.value = musicVolume;
+        SoundSlider.value = soundVolume;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (NoValueChange())
+        {
+            SaveBtn.interactable = false;
+        }
+        else
+        {
+            SaveBtn.interactable = true;
+        }
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            Menu.SetActive(!Menu.activeSelf);
+        }
+    }
+    private bool NoValueChange()
+    {
+        int numberOfLevel = 0;
+        int timeEachLevel = 0;
+        int tryCount = 0;
+        Int32.TryParse(NumberOfLevelField.text, out numberOfLevel);
+        Int32.TryParse(TimeField.text, out timeEachLevel);
+        Int32.TryParse(TryCountField.text, out tryCount);
+        if (Level.maxTime != timeEachLevel || 
+        Level.NumberOfLevels != numberOfLevel ||
+        PlaceHolder.maxTryCount != tryCount)
+        {
+            return false;
+        }
+        return true;
+    }
+    public void OpenSettings()
+    {
+        SettingsCanvas.SetActive(true);
+        Menu.SetActive(false);
+        int numberOfLevel = PlayerPrefs.GetInt("numLevel",3);
+        int timeEachLevel = PlayerPrefs.GetInt("time", 30);
+        int tryCount = PlayerPrefs.GetInt("tryCount", 5);
+        float musicVolume = PlayerPrefs.GetFloat("musicVolume", 1);
+        float soundVolume = PlayerPrefs.GetFloat("soundVolume", 0.7f);
+        BackGroundMusic.volume = musicVolume;
+        Sound.volume = soundVolume;
+        BackGroundMusicSlider.value = musicVolume;
+        SoundSlider.value = soundVolume;
+        TryCountField.text = tryCount.ToString();
+        TimeField.text = timeEachLevel.ToString();
+        NumberOfLevelField.text = numberOfLevel.ToString();
+    }
+    public void Save()
+    {
+        int numberOfLevel = 0;
+        int timeEachLevel = 0;
+        int tryCount = 0;
+        if (!Int32.TryParse(NumberOfLevelField.text, out numberOfLevel))
+        {
+            AlertError();
+            return;
+        }
+        if (!Int32.TryParse(TimeField.text, out timeEachLevel))
+        {
+            AlertError();
+            return;
+        }
+        if (!Int32.TryParse(TryCountField.text, out tryCount))
+        {
+            AlertError();
+            return;
+        }
+
+        PlayerPrefs.SetInt("numLevel", numberOfLevel);
+        PlayerPrefs.SetInt("time", timeEachLevel);
+        PlayerPrefs.SetInt("tryCount", tryCount);
+  
+        Level.maxTime = timeEachLevel;
+        Level.NumberOfLevels = numberOfLevel;
+        PlaceHolder.maxTryCount = tryCount;
+        
+    }
+
+    void AlertError()
+    {
+        print("error");
+    }
+    public void OpenMenu() {
+        SettingsCanvas.SetActive(false);
+        Menu.SetActive(true);
+        EndingCanvas.SetActive(false);
+        EndingCanvasLeft.SetActive(false);
+        EndingCanvasRight.SetActive(false);
+        UIHandler.Instance.OpenMainMenu();
+    }
+    public void MusicVolumeChange(float val)
+    {
+        BackGroundMusic.volume = val;
+        PlayerPrefs.SetFloat("musicVolume", val);
+    }
+    public void SoundVolumeChange(float val)
+    {
+        Sound.volume = val;
+        PlayerPrefs.SetFloat("soundVolume", val);
+    }
+    public void Close()
+    {
+        OpenMenu();
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class LeftScreenLevel : Level
+{
+    protected override float GetSpawnX(bool leftPart = true)
+    {
+        float spawnX = 0;
+        float padding = Screen.width / 16;
+        if (leftPart)
+        {
+            spawnX = 1.7f * padding;
+        }
+        else
+            spawnX = Screen.width / 2 - padding;
+        return spawnX;
+    }
+    override protected Vector3 GetCenterPoint()
+    {
+        var spawnScreen = new Vector2(Screen.width / 4, Screen.height / 2);
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(spawnScreen);
+
+        if (Physics.Raycast(ray, out hit, 100, planeLayer))
+        {
+            return hit.point;
+        }
+        return Vector3.zero;
+    }
+}
+﻿using Assets.Scripts.Model;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using Random = UnityEngine.Random;
+
+public class Level : MonoBehaviour
+{
+    [Header("List of Planets")]
+    public List<AstronomicalObject> allPlanets;
+    //Hide
+    [HideInInspector]
+    public AstronomicalObject M1;
+    public AstronomicalObject m;
+    [HideInInspector]
+    public AstronomicalObject M2;
+    public ParticleSystem WinEffect;
+    public TimeColorChange timeColorChange;
+    [Header("Config Params")]
+    static public int NumberOfLevels = 3;
+    static public float maxTime = 30;
+    public PlaceHolder PlaceHolder;
+    public LayerMask planeLayer;
+
+    [Header("UI Components")]
+    public TextMeshProUGUI TimeCounterText;
+    public TextMeshProUGUI ScoreText;
+    public TextMeshProUGUI LevelText;
+    public GameObject UIComponents;
+    public GameObject EndGameUI;
+    public Text TotalScore;
+    public Text TotalTime;
+
+    //Private
+    private bool playing = false;
+    private int levelCounter = 0;
+    private int score = 0;
+    private float timeCounter;
+    private float totalTime = 0;
+    private bool animationTime = false;
+    // Start is called before the first frame update
+    void Awake()
+    {
+        m.gameObject.SetActive(false);
+        PlaceHolder.gameObject.SetActive(false);
+        EndGameUI.SetActive(false);
+    }
+    public bool IsEnding() { return levelCounter > NumberOfLevels || timeCounter <= 0; }
+    public bool IsPlaying() { return playing; }
+    public bool IsAnimationTime() { return animationTime; }
+    // Update is called once per frame
+    void Update()
+    {
+        if (playing)
+        {
+            timeCounter -= Time.deltaTime;
+            if (timeCounter <= 0)
+            {
+                TimeCounterText.text =  "00:00";
+                
+            }
+            else
+            {
+
+                timeColorChange.UpdateColor((int)timeCounter);
+                TimeSpan time = TimeSpan.FromSeconds(timeCounter);
+                string minute = time.Minutes.ToString();
+                if (time.Minutes < 10)
+                {
+                    minute = "0" + time.Minutes;
+                }
+                string second = time.Seconds.ToString();
+                if (time.Seconds < 10)
+                {
+                    second = "0" + time.Seconds;
+                }
+                TimeCounterText.text = minute + ":" + second; 
+            }
+            
+            if (timeCounter < 0)
+            {
+                EndGame();
+                PlaceHolder.TimeUp();
+               
+            }
+            
+        }
+    }
+    public void RandomizePosition()
+    {
+        var center = GetCenterPoint();
+        var id1 = UnityEngine.Random.Range(0, allPlanets.Count);
+        M1 = allPlanets[id1];
+       // M1 = allPlanets[5];
+        if (id1 < 4)
+        {
+            M2 = allPlanets[UnityEngine.Random.Range(0, 4)];
+        }
+        else
+        {
+            M2 = allPlanets[UnityEngine.Random.Range(4, allPlanets.Count)];
+        }
+        
+        bool left = Random.Range(0, 2) == 0 ? true : false;
+        M1 = Clone(M1, left);
+        M1.transform.parent = PlaceHolder.transform.parent.parent.parent;
+        M1.setHeight();
+        M1.gameObject.SetActive(true);
+        
+
+
+        M2 = Clone(M2, !left);
+        M2.transform.parent = PlaceHolder.transform.parent.parent.parent;
+        M2.setHeight();
+        M2.gameObject.SetActive(false);
+
+        PlaceHolder.transform.position = M2.transform.position;
+        PlaceHolder.transform.localPosition = new Vector3(PlaceHolder.transform.localPosition.x, 0, PlaceHolder.transform.localPosition.z);
+        PlaceHolder.gameObject.SetActive(true);
+    }
+    virtual protected float GetSpawnX(bool leftPart = true)
+    {
+        float spawnX = 0;
+        float padding = Screen.width / 6;
+        if (leftPart)
+        {
+            spawnX = Random.Range(0 + padding, Screen.width / 2 - padding);
+        }
+        else
+            spawnX = Random.Range(Screen.width / 2 + padding, Screen.width - padding);
+        print(spawnX);
+        return spawnX;
+    }
+     AstronomicalObject Clone(AstronomicalObject origin, bool leftPart = true)
+    {
+
+        float spawnY = Screen.height/2;
+        float spawnX = GetSpawnX(leftPart);
+        float padding = Screen.width / 12;
+        
+        var spawnScreen = new Vector2(spawnX, spawnY);
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(spawnScreen);
+
+        if (Physics.Raycast(ray, out hit, 100, planeLayer))
+        {
+            Transform objectHit = hit.transform;
+            if (origin.transform.name.Contains("07_saturn"))
+                return GameObject.Instantiate(origin, hit.point, Quaternion.Euler(210, 0, 0));
+            return GameObject.Instantiate(origin, hit.point, Quaternion.Euler(180, 0, 0));
+            // Do something with the object that was hit by the raycast.
+        }
+        return null;
+    }
+    public void FindMeanAndSetRocket()
+    {
+        var center = GetCenterPoint();
+        var d = Vector3.Distance(M1.transform.position, M2.transform.position);
+        var d2 = d /(1 + Math.Sqrt(M1.Mass / M2.Mass));
+        var direction = (M1.transform.position - M2.transform.position).normalized;
+        var answer = M2.transform.position + direction * ((float)d2);
+        m.transform.position = answer;
+        m.setHeight();
+        m.gameObject.SetActive(true);
+
+        var d1 = d2 * Math.Sqrt(M1.Mass / M2.Mass);
+        PlaceHolder.M1 = M1;
+        PlaceHolder.SetAttribues(M2.Mass);
+    }
+    public void Play()
+    {
+      
+        RandomizePosition();
+        FindMeanAndSetRocket();
+        StartCoroutine(SetPositionBeforePlaying(0.5f));
+
+    }
+    IEnumerator SetPositionBeforePlaying(float time)
+    {
+        animationTime = true;
+        var center = GetCenterPoint();
+        var M1Pos = M1.transform.position;
+        var placeHolderPos = PlaceHolder.transform.position;
+        var mPos = m.transform.position;
+        M1.transform.position = center;
+        PlaceHolder.transform.position = center;
+        m.transform.position = center;
+        for (float t = 0f; t <= 1; t += Time.deltaTime / time)
+        {
+            M1.transform.position = Vector3.Lerp(center, M1Pos, t); ;
+            PlaceHolder.transform.position = Vector3.Lerp(center, placeHolderPos, t); ;
+            m.transform.position = Vector3.Lerp(center, mPos, t); ;
+
+            yield return null;
+        }
+        M1.transform.position = M1Pos;
+        PlaceHolder.transform.position = placeHolderPos;
+        m.transform.position = mPos;
+
+        animationTime = false;
+        playing = true;
+       // timeCounter = maxTime;
+
+    }
+    virtual protected Vector3 GetCenterPoint()
+    {
+        var spawnScreen = new Vector2(Screen.width / 2, Screen.height / 2);
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(spawnScreen);
+
+        if (Physics.Raycast(ray, out hit, 100, planeLayer))
+        {
+            return hit.point;
+        }
+        return Vector3.zero;
+    }
+   
+    public void StartGame()
+    {
+        EndGameUI.SetActive(false);
+        UIComponents.SetActive(true);
+        levelCounter = 1;
+        score = 0;
+        totalTime = 0;
+        timeCounter = maxTime;
+        UpdateTextAfterEachLevel();
+        Play();
+    }
+    public void EndGame()
+    {
+        playing = false;
+        PlaceHolder.gameObject.SetActive(false);
+        StartCoroutine(EndGameCoroutine());
+    }
+    IEnumerator EndGameCoroutine()
+    {
+        yield return new WaitForSeconds(0.0f);
+        totalTime = maxTime-timeCounter;
+        EndGameUI.SetActive(true);
+        UIComponents.SetActive(false);
+        //   TotalScore.text = score + "/" + NumberOfLevels;
+
+        //  TotalTime.text = totalTime + " giây";
+        TotalScore.text = score.ToString();
+        TimeSpan time = TimeSpan.FromSeconds(timeCounter);
+        TotalTime.text = time.Minutes + ":" + time.Seconds;
+        UIHandler.Instance.EndGame();
+    }
+    private void UpdateTextAfterEachLevel()
+    {
+        if (LevelText != null)
+            LevelText.text = levelCounter + "/" + NumberOfLevels;
+        if (ScoreText != null) 
+            ScoreText.text = score.ToString();
+    }
+    public void EndLevel(bool isWin)
+    {
+        StartCoroutine(EndLevelCoroutine(isWin));
+    }
+    IEnumerator EndLevelCoroutine(bool isWin)
+    {
+        animationTime = true;
+        if (isWin)
+        {
+            score++;
+            WinEffect.gameObject.transform.position = GetCenterPoint();
+            WinEffect.Play();
+        }
+        
+
+
+        if (ScoreText != null) 
+            ScoreText.text = score.ToString();
+        //playing = false;
+       // totalTime += (int)(maxTime - timeCounter);
+        
+        yield return new WaitForSeconds(2.0f);
+
+        
+        StartCoroutine(SetPositionAfterEnding(0.5f));
+        
+    }
+    IEnumerator SetPositionAfterEnding(float time)
+    {
+        animationTime = true;
+        var center = GetCenterPoint();
+        var M1Pos = M1.transform.position;
+        var placeHolderPos = PlaceHolder.transform.position;
+        var mPos = m.transform.position;
+        for (float t = 0f; t <= 1; t += Time.deltaTime / time)
+        {
+            M1.transform.position = Vector3.Lerp(M1Pos, center, t); ;
+            PlaceHolder.transform.position = Vector3.Lerp(placeHolderPos, center, t); ;
+            m.transform.position = Vector3.Lerp(mPos, center, t); ;
+
+            yield return null;
+        }
+        animationTime = false;
+        Destroy(M1.gameObject);
+        Destroy(M2.gameObject);
+
+        m.gameObject.SetActive(false);
+        PlaceHolder.gameObject.SetActive(false);
+        yield return new WaitForSeconds(0.5f);
+        levelCounter++;
+        if (levelCounter <= NumberOfLevels && timeCounter > 0)
+        {
+            Play();
+            UpdateTextAfterEachLevel();
+        }
+        else
+        {
+            EndGame();
+        }
+    }
+    
+
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class LineAdjuster : MonoBehaviour
+{
+    LineRenderer line;
+    public LayerMask planeLayer;
+    // Start is called before the first frame update
+    void Start()
+    {
+        line = GetComponent<LineRenderer>();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        line.SetPosition(0, RayCastPointOnPlane(new Vector2(Screen.width / 2, 0)));
+        line.SetPosition(1, RayCastPointOnPlane(new Vector2(Screen.width / 2, Screen.height)));
+    }
+    Vector3 RayCastPointOnPlane(Vector2 spawnScreen)
+    {
+        //var spawnScreen = new Vector2(3 * Screen.width / 4, Screen.height / 2);
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(spawnScreen);
+
+        if (Physics.Raycast(ray, out hit, 100, planeLayer))
+        {
+            return hit.point;
+        }
+        return Vector3.zero;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class NoteTextController : MonoBehaviour
+{
+    public GameObject NoteText;
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+}
+﻿using Assets.Scripts.Model;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class PlaceHolder : MonoBehaviour
+{
+    public RocketController rocketController;
+    public ParticleSystem Circle;
+    public AstronomicalObject M1;
+    public int count = 5;
+    static public int maxTryCount = 5;
+    private double MassAnswer;
+    private Transform M2;
+    public TextMeshProUGUI TryCount;
+    private AstronomicalObject CurrentAns;
+    public Slider ScoreSlider;
+    private AstronomicalObject TempObject;
+    private Vector3 oldScale;
+    private ParticleSystem.MinMaxGradient oldColor;
+    public ParticleSystem.MinMaxGradient changeColor;
+    public Image[] TryCountLines;
+    public void SetAttribues(double massAnswer)
+    {
+        this.MassAnswer = massAnswer;
+        count = maxTryCount;
+        rocketController.ResetGame();
+        oldColor = Circle.main.startColor;
+    }
+    // Start is called before the first frame update
+    void Start()
+    {
+        oldScale = Circle.transform.localScale;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        cooldown -= Time.deltaTime;
+        CheckM2Out();
+        TryCount.SetText(count.ToString());
+        ScoreSlider.value = 1.0f * count / maxTryCount;
+        for(int i = 0; i < count; i++)
+        {
+            TryCountLines[i].enabled = true;
+        }
+        for(int i = count; i < TryCountLines.Length; i++)
+        {
+            TryCountLines[i].enabled = false;
+        }
+    
+        if (TempObject != null && TempObject.GetComponent<Renderer>().enabled && Vector3.Distance(TempObject.transform.position, transform.position) < 10)
+        {
+
+            Circle.transform.localScale = TempObject.scaleFactor * Vector3.one;
+            var main = Circle.main;
+            main.startColor = changeColor;
+        }
+        else
+        {
+            Circle.transform.localScale = oldScale;
+            var main = Circle.main;
+            main.startColor = oldColor;
+        }
+    }
+    void CheckM2Out()
+    {
+        if (M2!=null && M2.GetComponent<Renderer>().enabled == false)
+        {
+            this.rocketController.Cancel();
+        }
+        
+    }
+    public void TimeUp()
+    {
+        if (CurrentAns == null)
+        {
+            this.rocketController.FlyTo(M1.transform, true);
+        }
+        else
+        {
+            var mass2 = CurrentAns.Mass;
+            if (MassAnswer > mass2)
+            {
+                this.rocketController.FlyTo(M1.transform, true);
+            }
+            else if (MassAnswer < mass2)
+            {
+                this.rocketController.FlyTo(CurrentAns.transform, true);
+            }
+
+        }
+        
+    }
+    IEnumerator coroutine = null;
+    private float cooldown = 0.25f;
+    private void OnTriggerEnter(Collider other)
+    {
+        if (rocketController.level.IsAnimationTime())
+            return;
+        var aObj = other.GetComponent<AstronomicalObject>();
+        if (aObj && cooldown < 0)
+        {
+            if (coroutine == null)
+            {
+                TempObject = aObj;
+                coroutine = Check(aObj);
+                StartCoroutine(coroutine);
+            }
+            
+        }
+    }
+    
+    IEnumerator Check(AstronomicalObject aObj)
+    {
+        var pos = aObj.transform.position;
+        yield return null;
+        if (Vector3.Distance(aObj.transform.position, pos) < 3.5)
+        {
+            var mass2 = aObj.Mass;
+            M2 = aObj.transform;
+            CurrentAns = aObj;
+            if (MassAnswer > mass2)
+            {
+                this.rocketController.FlyTo(M1.transform, --count <= 0);
+            }
+            else if (MassAnswer < mass2)
+            {
+                this.rocketController.FlyTo(aObj.transform, --count <= 0);
+            }
+            else
+            {
+                this.rocketController.NotifySuccess();
+            }
+        }
+
+        cooldown = 0.25f;
+        coroutine = null;
+    }
+    private void OnTriggerExit(Collider other)
+    {
+        if (rocketController.level.IsAnimationTime())
+            return;
+        if (cooldown <= 0)
+        {
+            CurrentAns = null;
+            this.rocketController.Cancel();
+            cooldown = 1;
+            TempObject = null;
+            Circle.transform.localScale = oldScale;
+        }
+        
+
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlaceHolderTextController : MonoBehaviour
+{
+    public LayerMask planeLayer;
+    public Transform Planet;
+    private Transform odlParent;
+    public float distance = 80;
+    // Start is called before the first frame update
+    void Start()
+    {
+        odlParent = transform.parent;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (Planet && Planet.gameObject.activeSelf == true )
+        {
+            transform.SetParent(null);
+            for (var i = 0; i < transform.childCount; i++)
+            {
+                transform.GetChild(i).gameObject.SetActive(true);
+            }
+        }
+        else
+        {
+            transform.SetParent(odlParent);
+            for (var i = 0; i < transform.childCount; i++)
+            {
+                transform.GetChild(i).gameObject.SetActive(false);
+            }
+        }
+        UpdatePostion();
+       // transform.LookAt(Camera.main.transform);
+        transform.localEulerAngles = new Vector3(0,0, 0);
+
+    }
+    void UpdatePostion()
+    {
+        Vector2 _2dPointOfPlanet = Camera.main.WorldToScreenPoint(Planet.transform.position);
+        _2dPointOfPlanet.y -= distance;
+        transform.position = getPointInPlane(_2dPointOfPlanet);
+    }
+    Vector3 getPointInPlane(Vector2 screenPoint)
+    {
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(screenPoint);
+
+        if (Physics.Raycast(ray, out hit, 100, planeLayer))
+        {
+          
+            return hit.point;
+        }
+        return Vector3.zero;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class ResultTextUICopy : MonoBehaviour
+{
+    [Header("Player 1")]
+    [Header("UIs on comparison board")]
+    public Text ScoreResultPlayer1;
+    public Text TimeResultPlayer1;
+    public Text ScoreOnComparisionPlayer1;
+    public Text TimeOnComparisionPlayer1;
+
+    [Header("Player 2")]
+    [Header("UIs on comparison board")]
+    public Text ScoreResultPlayer2;
+    public Text TimeResultPlayer2;
+    public Text ScoreOnComparisionPlayer2;
+    public Text TimeOnComparisionPlayer2;
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        UpdateUI();
+    }
+    void UpdateUI()
+    {
+        ScoreOnComparisionPlayer1.text = ScoreResultPlayer1.text;
+        ScoreOnComparisionPlayer2.text = ScoreResultPlayer2.text;
+        TimeOnComparisionPlayer1.text = TimeResultPlayer1.text;
+        TimeOnComparisionPlayer2.text = TimeResultPlayer2.text;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class RightScreenLevel : Level
+{
+    protected override float GetSpawnX(bool leftPart = true)
+    {
+        float spawnX = 0;
+        float padding = Screen.width / 16;
+        if (leftPart)
+            spawnX = Screen.width / 2 + padding;
+        else
+            spawnX = Screen.width - 1.7f * padding;
+        return spawnX;
+    }
+    override protected Vector3 GetCenterPoint()
+    {
+        var spawnScreen = new Vector2(3*Screen.width / 4, Screen.height / 2);
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(spawnScreen);
+
+        if (Physics.Raycast(ray, out hit, 100, planeLayer))
+        {
+            return hit.point;
+        }
+        return Vector3.zero;
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class RocketController : MonoBehaviour
+{
+    public ParticleSystem boom;
+    public Transform fakeRocket;
+    public AudioClip boomAudio;
+    public AudioClip correctSound;
+    public AudioClip failSound;
+    public AudioClip gameOverSound;
+    public AudioClip warningSound;
+    public Level level;
+    public GameObject Render;
+    private bool endGame = false;
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+    private IEnumerator coroutine = null;
+    public void FlyTo(Transform target, bool finalFly = false)
+    {
+        if (endGame) return;
+        AudioManager.Instance.audioSource.PlayOneShot(failSound);
+        if (finalFly)
+        {
+            Cancel();
+            StartCoroutine(CouroutineFlyTo(target));
+        }
+            
+        else
+        {
+            Cancel();
+            coroutine = AnimationFLy(target);
+            StartCoroutine(coroutine);
+        }
+    }
+    
+    public void Cancel()
+    {
+        if (coroutine != null)
+        {
+            fakeRocket.gameObject.SetActive(false);
+            StopCoroutine(coroutine);
+        }
+    }
+    IEnumerator AnimationFLy(Transform target, float time = 1.0f)
+    {
+        fakeRocket.gameObject.SetActive(true);
+        fakeRocket.position = transform.position;
+        Vector3 startingPos = fakeRocket.transform.position;
+        Vector3 finalPos = (target.position - startingPos);
+        var length = finalPos.magnitude;
+        finalPos = startingPos + finalPos.normalized * length / 3;
+        float elapsedTime = 0;
+        AudioManager.Instance.audioSource.PlayOneShot(warningSound);
+        while (elapsedTime < time)
+        {
+            fakeRocket.transform.position = Vector3.Lerp(startingPos, finalPos, (elapsedTime / time));
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        fakeRocket.gameObject.SetActive(false);
+        coroutine = AnimationFLy(target);
+        StartCoroutine(coroutine);
+    }
+    IEnumerator CouroutineFlyTo(Transform target, float time = 2.0f)
+    {
+        endGame = true;
+        Vector3 startingPos = transform.position;
+        Vector3 finalPos = target.position;
+        float elapsedTime = 0;
+        AudioManager.Instance.audioSource.PlayOneShot(warningSound);
+        while (elapsedTime < time)
+        {
+            transform.position = Vector3.Lerp(startingPos, finalPos, (elapsedTime / time));
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+        AudioManager.Instance.audioSource.PlayOneShot(boomAudio);
+        boom.gameObject.SetActive(true);
+        boom.Play();
+        yield return new WaitForSeconds(1f);
+        AudioManager.Instance.audioSource.PlayOneShot(gameOverSound);
+        Render.SetActive(false);
+        level.EndLevel(false);
+        boom.gameObject.SetActive(false);
+
+    }
+    public void NotifySuccess()
+    {
+        print("success");
+        AudioManager.Instance.audioSource.PlayOneShot(correctSound);
+        level.EndLevel(true);
+        boom.gameObject.SetActive(false);
+    }
+    public void ResetGame()
+    {
+        endGame = false;
+        Render.SetActive(true);
+    }
+    private void OnTriggerEnter(Collider other)
+    {
+        print(other.name);
+    }
+
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class RotateLocal : MonoBehaviour
+{
+    // Start is called before the first frame update
+    void Start()
+    {
+    
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        transform.Rotate(transform.forward, 0.3f, Space.World);
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class RotationController : MonoBehaviour
+{
+    public LayerMask planeLayer;
+    public Transform Planet;
+    public float distance = 20;
+    private Transform odlParent;
+    // Start is called before the first frame update
+    void Start()
+    {
+        odlParent = transform.parent;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (Planet == null)
+        {
+            Destroy(this.gameObject);
+        }
+        if (Planet && Planet.GetComponent<Renderer>().enabled == true)
+        {
+            transform.SetParent(null);
+            for (var i = 0; i < transform.childCount; i++)
+            {
+                transform.GetChild(i).gameObject.SetActive(true);
+            }
+        }
+        else
+        {
+            transform.SetParent(odlParent);
+            for(var i = 0; i < transform.childCount; i++)
+            {
+                transform.GetChild(i).gameObject.SetActive(false);
+            }
+        }
+        UpdatePostion();
+        transform.LookAt(Camera.main.transform);
+        transform.localEulerAngles = new Vector3(transform.localEulerAngles.x - 180,0, transform.localEulerAngles.z);
+
+    }
+    void UpdatePostion()
+    {
+        if (Planet != null)
+        {
+            // Vector2 _2dPointOfPlanet = Camera.main.WorldToScreenPoint(Planet.transform.position);
+            //  transform.position = getPointInPlane(_2dPointOfPlanet);
+            var pos = Planet.transform.position;
+            transform.position = pos;
+        }
+        
+    }
+    Vector3 getPointInPlane(Vector2 screenPoint)
+    {
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(screenPoint);
+
+        if (Physics.Raycast(ray, out hit, 100, planeLayer))
+        {
+          
+            return hit.point;
+        }
+        return Vector3.zero;
+    }
+}
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TimeColorChange : MonoBehaviour
+{
+    public TextMeshProUGUI TimeText;
+    public Image ClockImage;
+    public AudioSource ClockSource;
+    static public AudioSource StaticClockSource;
+    // Start is called before the first frame update
+    void Awake()
+    {
+        StaticClockSource = ClockSource;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+    }
+    public void UpdateColor(int time)
+    {
+  
+        if (time <= 10)
+        {
+            if (!StaticClockSource.isPlaying && time > 5)
+            {
+                print("Play clock");
+                StaticClockSource.Play();
+            }
+            ClockImage.color = Color.red;
+            TimeText.color = Color.red;
+        }
+        else if(time <= 30)
+        {
+            ClockImage.color = Color.yellow;
+            TimeText.color = Color.yellow;
+        }
+        else
+        {
+            ClockImage.color = Color.white;
+            TimeText.color = Color.white;
+        }
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Tracking : MonoBehaviour
+{
+    
+    public Transform imageTarget;
+    private Transform oldParent;
+    // Start is called before the first frame update
+    void Start()
+    {
+        oldParent = transform.parent;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            ReTrack();
+        }
+    }
+    public void Track()
+    {
+        StartCoroutine(waitAndHide());
+    }
+    IEnumerator waitAndHide()
+    {
+        yield return new WaitForSeconds(2f);
+        transform.SetParent(null);
+        imageTarget.gameObject.SetActive(false);
+    }
+    public void ReTrack()
+    {
+        transform.SetParent(oldParent);
+        imageTarget.gameObject.SetActive(true);
+    }
+}
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class UIHandler : MonoBehaviour
+{
+    enum Mode
+    {
+        Default,
+        SinglePlayer,
+        TwoPlayer
+    }
+    public GameObject MainMenu;
+    public Level SinglePlayer;
+    public Level[] levels;
+    static public UIHandler Instance;
+    public GameObject ComparisonBoard;
+    private Mode mode = Mode.Default;
+    // Start is called before the first frame update
+    void Start()
+    {
+        Instance = this;
+        SinglePlayer.gameObject.SetActive(false);
+        foreach (var l in levels)
+        {
+            l.gameObject.SetActive(false);
+        }
+        ComparisonBoard.SetActive(false);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+    public void StartGame()
+    {
+
+        ComparisonBoard.SetActive(false);
+        MainMenu.SetActive(false);
+        SinglePlayer.gameObject.SetActive(true);
+        foreach (var l in levels)
+        {
+            l.gameObject.SetActive(false);
+        }
+        SinglePlayer.StartGame();
+        mode = Mode.SinglePlayer;
+    }
+    public void TwoPlayerStartGame()
+    {
+
+        ComparisonBoard.SetActive(false);
+        MainMenu.SetActive(false);
+        SinglePlayer.gameObject.SetActive(false);
+        foreach (var l in levels)
+        {
+            l.gameObject.SetActive(true);
+        }
+        foreach (var l in levels)
+        {
+            l.StartGame();
+        }
+        mode = Mode.TwoPlayer;
+    }
+    public void EndGame()
+    {
+        if (mode == Mode.TwoPlayer)
+        {
+            bool isDone = true;
+            foreach(var l in levels)
+            {
+                if (!l.IsEnding())
+                {
+                    isDone = false;
+                    break;
+                }
+            }
+            if (isDone)
+            {
+                ComparisonBoard.SetActive(true);
+            }
+        }
+    }
+    public void OpenMainMenu()
+    {
+        mode = Mode.Default;
+        MainMenu.SetActive(true);
+        ComparisonBoard.SetActive(false);
+    }
+    
+}
