@@ -68,20 +68,20 @@ public class OpenCVCameraManager : MonoBehaviour
 {
     [Header("Camera Settings")]
     public int cameraIndex = 0;
-    public int requestedWidth = 1920;
-    public int requestedHeight = 1080;
+    public int requestedWidth = 640;
+    public int requestedHeight = 420;
     public bool useBackCamera = true;
 
     [Header("SIFT Feature Settings")]
-    public int nFeatures = 500;                    // Number of best features to retain
+    public int nFeatures = 200;                    // Number of best features to retain
     public int nOctaveLayers = 3;                  // Number of layers in each octave
     public float contrastThreshold = 0.04f;        // Lower = more features
     public float edgeThreshold = 10f;              // Filter out edge-like features
     public float sigma = 1.6f;                     // Gaussian sigma
 
     [Header("Performance Settings")]
-    public int processEveryNthFrame = 2;           // Detection frequency
-    public int trackingProcessEveryNthFrame = 1;   // Tracking frequency (faster)
+    public int processEveryNthFrame = 3;           // Detection frequency
+    public int trackingProcessEveryNthFrame = 2;   // Tracking frequency (faster)
     public float detectionInterval = 0.5f;         // Min time between detections
     public float trackingTimeout = 1.0f;           // Time before losing track
 
@@ -96,7 +96,7 @@ public class OpenCVCameraManager : MonoBehaviour
     public float claheClipLimit = 2.0f;
     public bool enableDenoising = false;           // if slow turn off
     public float denoisingH = 3f;
-    public bool enableSharpening = true;
+    public bool enableSharpening = false;
     public float sharpeningAmount = 0.5f;
 
     [Header("Optical Flow Settings")]
@@ -146,7 +146,7 @@ public class OpenCVCameraManager : MonoBehaviour
         InitializeTrackingBehaviours();
 
         isInitialized = true;
-            
+
         if (showDebugInfo)
         {
             Debug.Log("Camera + Sift initialized");
@@ -610,6 +610,8 @@ public class OpenCVCameraManager : MonoBehaviour
 
         try
         {
+            Mat equalized = new Mat();
+            Imgproc.equalizeHist(input, equalized);
             // Apply CLAHE for better contrast
             if (enableCLAHE && clahe != null)
             {
